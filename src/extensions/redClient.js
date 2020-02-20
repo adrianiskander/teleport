@@ -6,4 +6,12 @@ let config = require('../settings/config');
 let redClient = redis.createClient(config.redisPort, config.redisHost);
 
 
+let redClient = redis.createClient({
+  host: config.redisHost,
+  port: config.redisPort,
+  path: config.redisSocketPath,
+  password: config.redisPass
+});
+
+
 module.exports = redClient;
