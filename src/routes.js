@@ -39,6 +39,14 @@ app.post('/login', (req, res, next) => {
 });
 
 
+app.get('/usersCount', (req, res) => {
+  /*
+    Get number of users connected to socketio.
+  */
+  res.status(200).send(JSON.stringify({ usersCount: io.eio.clientsCount }));
+});
+
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(config.publicDir, 'index.html'));
 });

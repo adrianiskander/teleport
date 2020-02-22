@@ -61,7 +61,10 @@ io.use((socket, next) => {
 
 io.on('connection', socket => {
 
+  io.emit('usersCount', JSON.stringify({ usersCount: io.eio.clientsCount }));
+
   socket.on('disconnect', () => {
+    io.emit('usersCount', JSON.stringify({ usersCount: io.eio.clientsCount }));
     redClient.hdel('teleport:clients', socket.id);
   });
 
@@ -83,6 +86,8 @@ io.on('connection', socket => {
 
       redClient.hdel('teleport:tokens', token.token);
       redClient.hdel('teleport:users', token.username);
+
+      io.emit('usersCount', JSON.stringify({ usersCount: Object.keys(io.sockets.connected).length }));
     });
   });
 
