@@ -14,14 +14,41 @@ let withRouter = ReactRouterDOM.withRouter;
 let serverUrl = 'http://127.0.0.1:3000';
 
 
-/*
-  Global utils.
-*/
 let scrollDown = () => {
   window.setTimeout(() => {
     window.scrollTo(0, document.body.scrollHeight);
   }, 1);
 };
+
+
+let requestGetUsersCount = () => {
+
+  let req = new XMLHttpRequest();
+  let usersCount = 1;
+
+  req.open('GET', serverUrl + '/usersCount');
+  req.send(null);
+  req.onload = () => {
+    if (req.status === 200) {
+      usersCount = JSON.parse(req.response).usersCount;
+      store.dispatch({ type: 'SET_USERS_COUNT', usersCount });
+    }
+  }
+};
+
+
+
+/*
+  Get users count with ajax until current client is connected to socket.
+*/
+let interval = window.setInterval(() => {
+  socket.connected
+    ? window.clearInterval(interval)
+    : requestGetUsersCount();
+}, 5000);
+
+
+requestGetUsersCount();
 
 
 let socket = io(serverUrl, {
@@ -54,9 +81,27 @@ socket.on('messages', messages => {
 });
 
 
-/*
-  Redux reducers and store
-*/
+socket.on('usersCount', data => {
+  /*
+    Receive number of users connected to socketio.
+  */
+  let usersCount = JSON.parse(data).usersCount;
+  store.dispatch({ type: 'SET_USERS_COUNT', usersCount });
+});
+
+
+let chatState = {
+  usersCount: 0
+};
+
+let chatReducer = (state = chatState, action) => {
+  if (action.type === 'SET_USERS_COUNT') {
+    return { usersCount: action.usersCount };
+  }
+  return state;
+};
+
+
 let messagesReducer = (state = [], action) => {
   if (action.type === 'SET_MESSAGES') {
     return action.messages;
@@ -79,6 +124,7 @@ let userReducer = (state = {}, action) => {
 
 
 let store = createStore(combineReducers({
+  chat: chatReducer,
   messages: messagesReducer,
   user: userReducer
 }));
@@ -197,15 +243,20 @@ let Navbar = (props) => {
     props.dispatch({ type: 'SET_MESSAGES', messages });
     props.dispatch({ type: 'SET_USER', user });
     window.sessionStorage.removeItem('token');
-    browserHistory.push('/');
     socket.emit('logout');
+    browserHistory.push('/');
+    window.location.reload(); // Reload to reconnect socketio
   };
 
   if (props.user.username) {
     return(
       <nav class="navbar bg-white shadow animated fadeInDown faster">
         <div class="container">
-          <a><strong><em>TELEPORT</em></strong></a>
+          <div type="button" class="btn btn-primary">
+            <span>Users online:</span>
+            <span class="badge badge-light ml-2">{ props.chat.usersCount }</span>
+          </div>
+
           <ul class="flex-align-center flex-row">
             <li>{ props.user.username }</li>
             <li><a class="btn btn-danger ml-3 text-white" onClick={ logout }>LOGOUT</a></li>
@@ -218,7 +269,14 @@ let Navbar = (props) => {
     return(
       <nav class="navbar bg-white shadow animated fadeInDown faster">
         <div class="container">
-          <a><strong><em>TELEPORT</em></strong></a>
+          <a><strong>TELEPORT</strong>
+
+          <div type="button" class="btn btn-primary ml-3">
+            <span>Users online:</span>
+            <span class="badge badge-light ml-2">{ props.chat.usersCount }</span>
+          </div>
+
+          </a>
         </div>
       </nav>
     );
@@ -241,6 +299,7 @@ let App = () => {
 
 let mapStateToProps = (state) => {
   return {
+    chat: state.chat,
     messages: state.messages,
     user: state.user
   }
