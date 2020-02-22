@@ -3,3 +3,5 @@ assets
 confsec.*
 node_modules
 package-lock.json
+temp
+tmp
